@@ -1,30 +1,13 @@
 {
-  "name": "express",
-  "description": "Fast, unopinionated, minimalist web framework",
-  "version": "4.13.3",
-  "author": "TJ Holowaychuk <tj@vision-media.ca>",
-  "contributors": [
-    "Aaron Heckmann <aaron.heckmann+github@gmail.com>",
-    "Ciaran Jessup <ciaranj@gmail.com>",
-    "Douglas Christopher Wilson <doug@somethingdoug.com>",
-    "Guillermo Rauch <rauchg@gmail.com>",
-    "Jonathan Ong <me@jongleberry.com>",
-    "Roman Shtylman <shtylman+expressjs@gmail.com>",
-    "Young Jae Sim <hanul@hanul.me>"
-  ],
+  "name": "express-coffee",
+  "description": "a trial to translate express(http://www.expressjs.io) to coffee",
+  "version": "0.1",
+  "author": "Twiknight",
   "license": "MIT",
-  "repository": "strongloop/express",
-  "homepage": "http://expressjs.com/",
+  "repository": "Twiknight/ExpressCoffee",
   "keywords": [
     "express",
-    "framework",
-    "sinatra",
-    "web",
-    "rest",
-    "restful",
-    "router",
-    "app",
-    "api"
+    "coffee"
   ],
   "dependencies": {
     "accepts": "~1.2.12",
@@ -70,15 +53,16 @@
     "method-override": "~2.3.5",
     "morgan": "~1.6.1",
     "multiparty": "~4.1.2",
-    "vhost": "~3.0.1"
+    "vhost": "~3.0.1",
+	"gulp": "3.9.0",
+	"gulp-coffee":"2.3.1",
+	"gulp-util":"3.0.6"
   },
   "engines": {
     "node": ">= 0.10.0"
   },
   "files": [
     "LICENSE",
-    "History.md",
-    "Readme.md",
     "index.js",
     "lib/"
   ],
