@@ -30,21 +30,21 @@ req.acceptsEncodings = () ->
   return accept.encodings.apply accept, arguments
 
 req.acceptsEncoding =
-  deprecate.function req.acceptsEncoding, 'req.acceptsEncodings: Use acceptsEncodings instead'
+  deprecate.function req.acceptsEncodings, 'req.acceptsEncodings: Use acceptsEncodings instead'
 
 req.acceptCharsets = () ->
   accept = accepts @
   return accept.charsets.apply accept,arguments
 
 req.acceptsCharset =
-  deprecate.function req.acceptCharset, 'req.acceptsCharset: Use acceptsCharsets instead'
+  deprecate.function req.acceptCharsets, 'req.acceptsCharset: Use acceptsCharsets instead'
 
 req.acceptsLanguages = ()->
   accept = accepts @
   return accept.languages.apply accept, arguments
 
 req.acceptsLanguage =
-  deprecate.function req.acceptsLanguage, 'req.acceptsLanguage: Use acceptsLanguages instead'
+  deprecate.function req.acceptsLanguages, 'req.acceptsLanguage: Use acceptsLanguages instead'
 
 req.range = (size) ->
   range = @get 'Range'
@@ -142,8 +142,7 @@ defineGetter req, 'hostname', () ->
 
 defineGetter req, 'host', deprecate.function(()->
   return @hostname
-  )
-deprecate.function @host,  'req.host: Use req.hostname instead'
+,'req.host: Use req.hostname instead')
 
 
 defineGetter req, 'fresh', () ->

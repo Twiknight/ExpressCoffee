@@ -1,8 +1,8 @@
 contentDisposition = require 'content-disposition'
 contetType = require 'content-type'
-deprecate = require 'deprecate'
-flatten = require 'flatten'
-mime = require 'mime'
+deprecate = require('depd') 'express'
+flatten = require 'array-flatten'
+mime = require('send').mime
 basename = require('path').basename
 etag = require 'etag'
 proxyaddr = require 'proxy-addr'

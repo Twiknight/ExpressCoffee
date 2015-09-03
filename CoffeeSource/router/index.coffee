@@ -1,6 +1,6 @@
 Route = require './route'
 Layer = require './layer'
-methods = require '.methods'
+methods = require 'methods'
 mixin = require 'utils-merge'
 debug = require('debug') 'express:router'
 deprecate = require('depd') 'express'
@@ -305,9 +305,10 @@ proto.route = (path)->
   @stack.push layer
   return route
 
-methods.cancat 'all'
-      .forEach ()->
+methods.concat 'all'
+      .forEach (method)->
         proto[method] = (path)->
           route = route path
           route[method].apply route, slice.call(arguments, 1)
           return this
+        return

@@ -6,9 +6,8 @@ Router = require './router'
 req = require './request'
 res = require './response'
 
-exports = module.exports = creatApplication
 
-creatApplication = ()->
+createApplication = ()->
   app = (req, res, next)->
     app.handle req,res,next
     return
@@ -26,6 +25,8 @@ creatApplication = ()->
 
   app.init()
   app
+
+exports = module.exports = createApplication
 
 exports.application = proto
 exports.request = req

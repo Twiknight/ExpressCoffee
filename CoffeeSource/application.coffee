@@ -81,7 +81,7 @@ app.defaultConfiguration = () ->
   return
 
 app.lazyrouter = () ->
-  unless @router
+  unless @_router
     @_router = new Router {
       caseSensitive: @enabled 'case sensitive routing'
       strict: @enabled 'strict routing'
@@ -120,6 +120,10 @@ app.use = (fn) ->
       path = fn
 
   fns = flatten slice.call(arguments, offset)
+  console.log arguments
+  console.log slice.call(arguments, offset)
+  console.log 'fns is...'
+  console.log fns
 
   if fns.length == 0
     throw new TypeError 'app.use() requires middleware functions'
@@ -204,7 +208,7 @@ app.enable = (setting) ->
 app.disable = (setting) ->
   return @set setting,false
 
-methods.forEach () ->
+methods.forEach (method) ->
   app[method] = (path) ->
     if method == 'get' && arguments.length == 1
       return @get path
