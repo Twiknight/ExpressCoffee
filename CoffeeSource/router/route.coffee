@@ -6,7 +6,6 @@ methods = require 'methods'
 slice = Array.prototype.slice
 toString = Object.prototype.toString
 
-module.exports = Route
 
 class Route
   constructor : (path)->
@@ -28,7 +27,7 @@ class Route
     return Boolean(this.methods[name])
 
 
-  __options:()->
+  _options:()->
     methods = Object.keys @methods
 
     if @methods.get && !@methods.head
@@ -108,3 +107,6 @@ class Route
         @stack.push layer
 
       return @
+
+
+module.exports = Route

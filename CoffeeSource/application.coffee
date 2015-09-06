@@ -92,7 +92,7 @@ app.lazyrouter = () ->
 
 app.handle = (req, res, callback) ->
   router = @_router
-  done = callback || finalhandler(req, res {
+  done = callback || finalhandler(req, res, {
     env: @get 'env'
     onerror: logerror.bind @
     })
@@ -120,10 +120,6 @@ app.use = (fn) ->
       path = fn
 
   fns = flatten slice.call(arguments, offset)
-  console.log arguments
-  console.log slice.call(arguments, offset)
-  console.log 'fns is...'
-  console.log fns
 
   if fns.length == 0
     throw new TypeError 'app.use() requires middleware functions'
@@ -211,13 +207,14 @@ app.disable = (setting) ->
 methods.forEach (method) ->
   app[method] = (path) ->
     if method == 'get' && arguments.length == 1
-      return @get path
+      return @set path
 
     @lazyrouter()
 
     route = @_router.route path
-    route[method].apply route, slice(arguments, 1)
+    route[method].apply route, slice.call(arguments, 1)
     return @
+  return
 
 app.all = (path) ->
   @lazyrouter()

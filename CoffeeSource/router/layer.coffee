@@ -3,8 +3,6 @@ debug = require('debug') 'express:router:layer'
 
 hasOwnProperty = Object.prototype.hasOwnProperty
 
-module.exports = Layer
-
 class Layer
   decode_param = (v)->
     if typeof v != 'string' || v.length == 0
@@ -87,3 +85,5 @@ class Layer
         params[key.name] = val
 
     return true
+
+module.exports = Layer

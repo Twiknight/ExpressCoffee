@@ -61,12 +61,12 @@ mergeParams = (params, parent) ->
   return mixin obj, params
 
 restore = (fn, obj) ->
-  props =  []
-  vals = []
+  props =  new Array(arguments.length - 2)
+  vals = new Array(arguments.length - 2)
 
-  for arg in arguments[2..]
-    props.push = arg
-    vals.push obj[arg]
+  for prop,idx in props
+    prop = arguments[idx + 2]
+    vals[idx] = obj[prop]
 
   return (err) ->
     for prop,index in props
@@ -165,7 +165,7 @@ proto.handle = (req, res, out)->
   req.baseUrl = parentUrl
   req.originalUrl = req.originalUrl || req.url
 
-  next = ()->
+  next = (err)->
     layerError = if err == 'route' then null else err
 
     if slashAdded
@@ -247,7 +247,7 @@ proto.handle = (req, res, out)->
         layer.handle_request req, res, next
       return
 
-    self.process_params layer, paramcalled, req, res (err)->
+    self.process_params layer, paramcalled, req, res, (err)->
       if err
         return next layerError || err
 
@@ -258,6 +258,74 @@ proto.handle = (req, res, out)->
       return
   next()
   return
+
+proto.process_params = (layer, called, req, res, done) ->
+  params = @params
+  keys = layer.keys
+
+  if !keys || keys.length is 0
+    return done()
+
+  i = 0
+  paramIndex = 0
+
+  paramCallback =  (err) ->
+    fn = paramCallbacks[paramIndex++]
+
+    paramcalled.value = req.params[key.name]
+
+    if err
+      paramCalled.error = err
+      param err
+      return
+
+    unless fn
+      return param()
+
+    try
+      fn req, res, paramCallback, paramVal, key.name
+      return
+    catch error
+      paramCallback error
+      return
+
+  param = (err) ->
+    if err
+      return done err
+
+    if i >= keys.length
+      return done()
+
+    paramIndex = 0
+    key = keys[i++]
+
+    if !key
+      return done()
+
+    name = key.name
+    paramVal = req.params[name]
+    paramCallbacks = params[name]
+    paramCalled = called[name]
+
+    if paramVal is undefined || !paramCallbacks
+      return param()
+
+    if paramCalled && (paramCalled.match is paramVal || (paramCalled.error && paramCalled.error isnt 'route'))
+      req.params[name] = paramCalled.value
+      return param paramCalled.error
+
+    called[name] = paramCalled = {
+      error: null
+      match: paramVal
+      value: paramVal
+    }
+
+    paramCallback()
+    return
+
+  param()
+  return
+
 
 proto.use = (fn) ->
   offset = 0
@@ -287,7 +355,7 @@ proto.use = (fn) ->
     layer = new Layer path,{
       sensitve: @caseSensitive
       strict: false
-      end: false}
+      end: false}, fn
 
     @stack.push layer
 
@@ -295,6 +363,7 @@ proto.use = (fn) ->
 
 proto.route = (path)->
   route = new Route path
+
   layer = new Layer path, {
     sensitve: @caseSensitive
     strict: @strict
@@ -308,7 +377,7 @@ proto.route = (path)->
 methods.concat 'all'
       .forEach (method)->
         proto[method] = (path)->
-          route = route path
+          route = @route path
           route[method].apply route, slice.call(arguments, 1)
           return this
         return
