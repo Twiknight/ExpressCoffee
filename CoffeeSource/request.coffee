@@ -32,12 +32,12 @@ req.acceptsEncodings = () ->
 req.acceptsEncoding =
   deprecate.function req.acceptsEncodings, 'req.acceptsEncodings: Use acceptsEncodings instead'
 
-req.acceptCharsets = () ->
+req.acceptsCharsets = () ->
   accept = accepts @
   return accept.charsets.apply accept,arguments
 
 req.acceptsCharset =
-  deprecate.function req.acceptCharsets, 'req.acceptsCharset: Use acceptsCharsets instead'
+  deprecate.function req.acceptsCharsets, 'req.acceptsCharset: Use acceptsCharsets instead'
 
 req.acceptsLanguages = ()->
   accept = accepts @
@@ -61,11 +61,11 @@ req.param = (name, defaultValue) ->
 
   deprecate 'req.param(' + args + '): Use req.params, req.body, or req.query instead'
 
-  if null != params[name] && params.hasOwnProperty(name)
+  if params[name]? && params.hasOwnProperty(name)
     return params[name]
-  if null != body[name]
+  if body[name]?
     return body[name]
-  if null != query[name]
+  if query[name]?
     return query[name]
 
   return defaultValue
@@ -115,9 +115,10 @@ defineGetter req, 'subdomains', () ->
 
   offset = @app.get 'subdomain offset'
   subdomains =
-    if isIP(hostname)
+    if !isIP(hostname)
     then hostname.split('.').reverse()
     else [hostname]
+  return subdomains.slice offset
 
 defineGetter req, 'path', () ->
   return parse(@).pathname
@@ -159,5 +160,5 @@ defineGetter req, 'stale', () ->
   return !@frseh
 
 defineGetter req, 'xhr', () ->
-  v = @get('X-Requested-With') || {}
+  v = @get('X-Requested-With') || ''
   return v.toLowerCase() == 'xmlhttprequest'
