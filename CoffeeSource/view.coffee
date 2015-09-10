@@ -24,7 +24,7 @@ class View
     @root = opts.root
 
     if !@ext && !@defaultEngine
-      throw New Error 'No default engine was specified and no extension was provided.'
+      throw new Error 'No default engine was specified and no extension was provided.'
 
     fileName = name
 
@@ -44,12 +44,10 @@ class View
 
   lookup: (name) ->
     roots = [].concat @root
-
+    path = ''
     debug 'lookup "%s"', name
 
-    for root in roots
-      if path
-        break
+    for root in roots when !path
 
       loc = resolve root,name
       dir = dirname loc
@@ -62,6 +60,7 @@ class View
   render: (options, callback) ->
     debug 'render "%s"', @path
     @engine @path, options, callback
+    return
 
   resolve: (dir, file) ->
     ext = @ext

@@ -61,7 +61,7 @@ exports.static = require 'serve-static'
 ].forEach((name)->
     Object.defineProperty(exports,name,{
         get: ()->
-          throw new Error "Most middleware (like ' + name + ') is no longer bundled with Express and must be installed separately. Please see https://github.com/senchalabs/connect#middleware."
+          throw new Error 'Most middleware (like ' + name + ') is no longer bundled with Express and must be installed separately. Please see https://github.com/senchalabs/connect#middleware.'
         configurable: true
       })
   )
