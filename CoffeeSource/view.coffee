@@ -21,7 +21,7 @@ class View
     opts = options || {}
     @defaultEngine = opts.defaultEngine
     @ext = extname name
-    @root = otps.root
+    @root = opts.root
 
     if !@ext && !@defaultEngine
       throw New Error 'No default engine was specified and no extension was provided.'
@@ -78,3 +78,5 @@ class View
       return path
 
     return
+
+module.exports = View

@@ -1,6 +1,6 @@
 
-var express = require('../')
-  , request = require('supertest');
+var express = require('../');
+var request = require('supertest');
 
 describe('app.del()', function(){
   it('should alias app.delete()', function(done){
@@ -12,6 +12,7 @@ describe('app.del()', function(){
 
     request(app)
     .del('/tobi')
-    .expect('deleted tobi!', done);
-  })
-})
+    .expect('deleted tobi!');
+    done();
+  });
+});

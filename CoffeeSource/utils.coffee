@@ -64,7 +64,10 @@ exports.flatten = deprecate.function flatten,
 exports.normalizeType = (type) ->
   return if ~type.indexOf '/'
   then acceptParams type
-  else {value:mime.lookup type, params:{}}
+  else {
+    value:mime.lookup type
+    params:{}
+  }
 
 exports.normalizeTypes = (types) ->
   ret = []

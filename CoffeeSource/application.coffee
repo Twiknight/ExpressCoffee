@@ -152,7 +152,7 @@ app.engine = (ext, fn) ->
   if typeof fn != 'function'
     throw new Error 'callback function required'
   extension =
-    if ext[0] != ''
+    if ext[0] != '.'
     then '.'+ext
     else ext
   @engines[extension] = fn

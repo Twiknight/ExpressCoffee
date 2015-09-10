@@ -1,6 +1,6 @@
 
-var express = require('../')
-  , fs = require('fs');
+var express = require('../');
+var fs = require('fs');
 
 function render(path, options, fn) {
   fs.readFile(path, 'utf8', function(err, str){
@@ -23,15 +23,15 @@ describe('app', function(){
         if (err) return done(err);
         str.should.equal('<p>tobi</p>');
         done();
-      })
-    })
+      });
+    });
 
     it('should throw when the callback is missing', function(){
       var app = express();
       (function(){
         app.engine('.html', null);
       }).should.throw('callback function required');
-    })
+    });
 
     it('should work without leading "."', function(done){
       var app = express();
@@ -44,9 +44,9 @@ describe('app', function(){
         if (err) return done(err);
         str.should.equal('<p>tobi</p>');
         done();
-      })
-    })
-    
+      });
+    });
+
     it('should work "view engine" setting', function(done){
       var app = express();
 
@@ -59,9 +59,9 @@ describe('app', function(){
         if (err) return done(err);
         str.should.equal('<p>tobi</p>');
         done();
-      })
-    })
-    
+      });
+    });
+
     it('should work "view engine" with leading "."', function(done){
       var app = express();
 
@@ -74,7 +74,7 @@ describe('app', function(){
         if (err) return done(err);
         str.should.equal('<p>tobi</p>');
         done();
-      })
-    })
-  })
-})
+      });
+    });
+  });
+});
