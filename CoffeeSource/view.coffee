@@ -44,18 +44,17 @@ class View
 
   lookup: (name) ->
     roots = [].concat @root
-    path = ''
     debug 'lookup "%s"', name
 
-    for root in roots when !path
+    for root in roots when !_path
 
       loc = resolve root,name
       dir = dirname loc
       file = basename loc
 
-      path = @resolve dir,file
+      _path = @resolve dir,file
 
-    return path
+    return _path
 
   render: (options, callback) ->
     debug 'render "%s"', @path

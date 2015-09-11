@@ -27,8 +27,10 @@ logerror = (err) ->
 tryRender = (view, options, callback) ->
   try
     view.render options, callback
+    return
   catch error
     callback error
+    return
 
 app.init = () ->
   @cache = {}
@@ -66,13 +68,16 @@ app.defaultConfiguration = () ->
 
   @locals = Object.create null
 
-  @mounpath = '/'
+  @mountpath = '/'
 
   @locals.settings = @settings
 
   @set 'view', View
   @set 'views', resolve('views')
   @set 'jsonp callback name', 'callback'
+
+  if env is 'production'
+    @enable 'view cache'
 
   Object.defineProperty @, 'router', {
     get: () ->
@@ -112,7 +117,7 @@ app.use = (fn) ->
   if typeof fn != 'function'
     arg = fn
 
-    while Array.isArray arg && arg.length != 0
+    while Array.isArray(arg) && arg.length != 0
       arg = arg[0]
 
     if typeof arg != 'function'
@@ -164,6 +169,8 @@ app.param = (name, fn) ->
   if Array.isArray name
     for nm in name
       @param nm, fn
+    return @
+  @_router.param name,fn
   return @
 
 app.set = (setting, val) ->
@@ -246,15 +253,15 @@ app.render = (name, options, callback) ->
 
   merge renderOptions, opts
 
-  if renderOptions.cache == null
+  unless renderOptions.cache?
     renderOptions.cache = @enabled 'view cache'
 
   if renderOptions.cache
     view = cache[name]
 
   unless view
-    View  = @get 'view'
-    view = new View name, {
+    _View  = @get 'view'
+    view = new _View name, {
       defaultEngine: @get 'view engine'
       root: @get 'views'
       engines: engines
@@ -262,9 +269,9 @@ app.render = (name, options, callback) ->
 
     unless view.path
       dirs =
-      if Array.isArray view.root && view.root.length >1
-      then 'directories"'+view.root.slice(0,-1).join('","')+'"or"'+view.root[view.root.length-1]+'"'
-      else 'directory"'+view.root + '"'
+      if Array.isArray(view.root) && view.root.length >1
+      then 'directories "' + view.root.slice(0, -1).join('", "') + '" or "' + view.root[view.root.length - 1] + '"'
+      else 'directory "' + view.root + '"'
       err = new Error 'Failed to lookup view "' + name + '" in views ' + dirs
       err.view = view
       return done err
@@ -273,6 +280,7 @@ app.render = (name, options, callback) ->
       cache[name] = view
 
   tryRender view, renderOptions, done
+  return
 
 app.listen = () ->
   server = http.createServer @
