@@ -28,7 +28,7 @@ acceptParams = (str, index) ->
 
 parseExtendedQueryString = (str) ->
   return qs.parse str,{
-    allowDots: flase
+    allowDots: false
     allowPrototypes: true
   }
 
