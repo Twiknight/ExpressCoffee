@@ -2,7 +2,7 @@ parseUrl = require 'parseurl'
 qs = require 'qs'
 
 query = (options)->
-  opts = Object.create options||null
+  opts = Object.create(options||null)
   queryparse = qs.parse
 
   if typeof options == 'function'
@@ -11,7 +11,7 @@ query = (options)->
 
   if opts != undefined
     if opts.allowDots == undefined
-      otps.allowDots = false
+      opts.allowDots = false
 
     if opts.allowPrototypes == undefined
       opts.allowPrototypes = true
@@ -21,8 +21,8 @@ query = (options)->
       tmp_value = parseUrl(req).query
       req.query = queryparse tmp_value, opts
 
-      next()
-      return
+     next()
+     return
 
   return query
 
