@@ -13,6 +13,9 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+#vscode files
+.vscode
+
 #npm
 node_modules
 

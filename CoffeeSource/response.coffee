@@ -2,7 +2,7 @@ contentDisposition = require 'content-disposition'
 deprecate = require('depd') 'express'
 escapeHtml = require 'escape-html'
 http = require 'http'
-isAbsolute = require('./utils').isAbsolute 
+isAbsolute = require('./utils').isAbsolute
 onFinished = require 'on-finished'
 path = require 'path'
 merge = require 'utils-merge'
@@ -10,6 +10,7 @@ sign = require('cookie-signature').sign
 normalizeType = require('./utils').normalizeType
 normalizeTypes = require('./utils').normalizeTypes
 setCharset = require('./utils').setCharset
+statusCodes = http.STATUS_CODES
 cookie = require 'cookie'
 send = require 'send'
 extname = path.extname
@@ -24,6 +25,7 @@ charsetRegExp = /;\s*charset\s*=/
 
 sendfile = (res, file, options, callback) ->
   done = false
+  streaming = undefined
   onaborted = ()->
     if done
       return
@@ -58,13 +60,6 @@ sendfile = (res, file, options, callback) ->
     callback()
     return
 
-  onfile = ()->
-    if done
-      return
-    done = true
-    callback()
-    return
-
   onfile = () ->
     streaming = false;
     return
@@ -84,8 +79,9 @@ sendfile = (res, file, options, callback) ->
 
       if done
         return
-        done = true
-        callback()
+      done = true
+      callback()
+    return
 
   onstream = () ->
     streaming = true
@@ -96,7 +92,7 @@ sendfile = (res, file, options, callback) ->
   file.on 'error', onerror
   file.on 'file', onfile
   file.on 'stream', onstream
-  onfinished res, onfinished
+  onFinished res, onfinish
 
   if options.headers
     file.on 'headers', (res) ->
@@ -105,30 +101,16 @@ sendfile = (res, file, options, callback) ->
 
       for key in keys
         res.setHeader key, obj[key]
-
+      return
   file.pipe res
   return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 res.status = (code) ->
   @statusCode = code
   return @
 
 res.links = (links) ->
-  link = @get 'Link'
+  link = @get('Link') || ''
   if link
     link += ', '
   return @set 'Link', link + Object.keys(links).map((rel) ->
@@ -150,70 +132,70 @@ res.send = (body) ->
       @statusCode = arguments[0]
       chunck = arguments[1]
 
-    if typeof chunck is 'number' && arguments.length is 1
-      if !@get 'Content-Type'
-        @type 'txt'
-      deprecate 'res.send(status): Use res.sendStatus(status) instead'
-      @statusCode = chunck
-      chunck = statusCodes[chunck]
+  if typeof chunck is 'number' && arguments.length is 1
+    if !@get 'Content-Type'
+      @type 'txt'
+    deprecate 'res.send(status): Use res.sendStatus(status) instead'
+    @statusCode = chunck
+    chunck = statusCodes[chunck]
 
-    switch typeof chunck
-      when 'string'
+  switch typeof chunck
+    when 'string'
+      unless @get 'Content-Type'
+        @type 'html'
+      break
+    when 'boolean','number','object'
+      if chunck is null
+        chunck = ''
+      else if Buffer.isBuffer chunck
         unless @get 'Content-Type'
-          @type 'html'
-        break
-      when 'boolean','number','object'
-        if chunck is null
-          chunck = ''
-        else if Buffer.isBuffer chunck
-          unless @get 'Content-Type'
-            @type 'bin'
-        else
-          return @json chunck
-        break
+          @type 'bin'
+      else
+        return @json chunck
+      break
 
-    if typeof chunck is 'string'
-      encoding = 'utf8'
-      type = @get 'Content-Type'
+  if typeof chunck is 'string'
+    encoding = 'utf8'
+    type = @get 'Content-Type'
 
-      if typeof type is 'string'
-        @set 'Content-Type', setCharset(type, 'utf-8')
+    if typeof type is 'string'
+      @set 'Content-Type', setCharset(type, 'utf-8')
 
-    if chunck isnt undefined
-      unless Buffer.isBuffer chunck
-        chunck = new Buffer(chunck, encoding)
-        encoding = undefined
+  if chunck isnt undefined
+    unless Buffer.isBuffer chunck
+      chunck = new Buffer(chunck, encoding)
+      encoding = undefined
 
-      len = chunck.length
-      @set 'Content-Length', len
+    len = chunck.length
+    @set 'Content-Length', len
 
-    generateETag = len isnt undefined && app.get 'etag fn'
-    if typeof generateETag is 'function' && @get('ETag')
-      if (etag = generateETag chunck,encoding)
-        @set "ETag",etag
+  generateETag = len isnt undefined && app.get 'etag fn'
+  if typeof generateETag is 'function' && !@get('ETag')
+    if (etag = generateETag chunck,encoding)
+      @set "ETag",etag
 
-    if req.fresh
-      @statusCode  =304
+  if req.fresh
+    @statusCode  =304
 
-    if 204 is @statusCode || 304 is @statusCode
-      @removeHeader 'Content-Type'
-      @removeHeader 'Content-Length'
-      @removeHeader 'Transfer-Encoding'
-      chunck = ''
+  if 204 is @statusCode || 304 is @statusCode
+    @removeHeader 'Content-Type'
+    @removeHeader 'Content-Length'
+    @removeHeader 'Transfer-Encoding'
+    chunck = ''
 
-    if req.method is 'HEAD'
-      @end()
-    else
-      @end(chunck,encoding)
+  if req.method is 'HEAD'
+    @end()
+  else
+    @end(chunck,encoding)
 
-    return @
+  return @
 
 
 res.json = (obj) ->
   val = obj
 
   if arguments.length is 2
-    if typeof arguments[1] is number
+    if typeof arguments[1] is 'number'
       deprecate 'res.json(obj, status): Use res.status(status).json(obj) instead'
       @statusCode = arguments[1]
     else
@@ -256,11 +238,15 @@ res.jsonp = (obj) ->
   if Array.isArray callback
     callback = callback[0]
 
-  body = body
-    .replace(/\u2028/g, '\\u2028')
-    .replace(/\u2029/g, '\\u2029')
-
-  body = '/**/ typeof ' + callback + ' === \'function\' && ' + callback + '(' + body + ');'
+  if typeof callback is 'string' && callback.length != 0
+      @charset = 'utf-8'
+      @set 'X-Content-Type-Options', 'nosniff'
+      @set 'Content-Type', 'text/javascript'
+      callback = callback.replace /[^\[\]\w$.]/g, ''
+      body = body
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029')
+      body = '/**/ typeof ' + callback + ' === \'function\' && ' + callback + '(' + body + ');'
   @send body
 
 res.sendStatus = (statusCode) ->
@@ -278,7 +264,7 @@ res.sendFile = (path, options, callback) ->
   opts = options || {}
 
   unless path
-    throw new TypeError 'path argument is require to res.sendFile'
+    throw new TypeError 'path argument is required to res.sendFile'
 
   if typeof options is 'function'
     done = options
@@ -288,9 +274,9 @@ res.sendFile = (path, options, callback) ->
     throw new TypeError 'path must be absolute or specify root to res.sendFile'
 
   pathname = encodeURI path
-  file = send req, path, opts
+  file = send req, pathname, opts
 
-  sendfile res, file, opts (err) ->
+  sendfile res, file, opts, (err) ->
     if done
       return done err
     if err && err.code is 'EISDIR'
@@ -299,6 +285,7 @@ res.sendFile = (path, options, callback) ->
     if err && err.code isnt 'ECONNABORTED' && err.syscall isnt 'write'
       next err
       return
+  return
 
 res.sendfile = (path, options, callback) ->
   done = callback
@@ -311,7 +298,7 @@ res.sendfile = (path, options, callback) ->
     done = options
     opts = {}
 
-  file = send req, pathname, opts
+  file = send req, path, opts
 
   sendfile res,file,opts, (err) ->
     if done
@@ -335,7 +322,7 @@ res.download = (path, filename, callback) ->
     name = null
 
   headers =
-    'Content-Dispositon': contentDisposition(name||path)
+    'Content-Disposition': contentDisposition(name||path)
 
   fullpath = resolve path
   return @sendFile fullpath, {headers: headers}, done
@@ -369,19 +356,19 @@ res.format = (obj) ->
   else if fn
     fn()
   else
-    err = Error 'Not Acceptable'
+    err =new Error 'Not Acceptable'
     err.status = err.statusCode = 406
-    err.types = normalizeTypes(key).map((o) ->
+    err.types = normalizeTypes(keys).map((o) ->
       return o.value
     )
+    next err
 
   return @
 
 res.attachment = (filename) ->
   if filename
     @type extname(filename)
-  @set 'Content-Dispositon', contentDisposition(filename)
-
+  @set 'Content-Disposition', contentDisposition(filename)
   return @
 
 res.append =(field, val) ->
@@ -408,13 +395,13 @@ res.set =
       else String val
 
       if field.toLowerCase() is 'content-type' && !charsetRegExp.test value
-        charset = mime.charset.lookup value.split(';')[0]
+        charset = mime.charsets.lookup value.split(';')[0]
         if charset
-          value += '; charset' + charset.toLowerCase()
+          value += '; charset=' + charset.toLowerCase()
 
       @setHeader field, value
     else
-      for key in field
+      for key of field
         @set key, field[key]
     return @
 
@@ -422,7 +409,7 @@ res.get = (field) ->
   return @getHeader field
 
 res.clearCookie = (name, options) ->
-  otps = merge {expires: new Date(1), path:'/'}, options
+  opts = merge {expires: new Date(1), path:'/'}, options
   return @cookie name, '', opts
 
 res.cookie = (name, value, options) ->
@@ -430,7 +417,7 @@ res.cookie = (name, value, options) ->
   secret = @req.secret
   signed = opts.signed
 
-  if signed = opts.signed
+  if signed && !secret
     throw New Error 'cookieParser("secret") required for signed cookie'
 
   val =
@@ -445,7 +432,7 @@ res.cookie = (name, value, options) ->
     opts.expires = new Date(Date.now() + opts.maxAge)
     opts.maxAge /= 1000;
 
-  if opts.path is null
+  unless opts.path?
     opts.path = '/'
 
   @append 'Set-cookie',cookie.serialize name, String(val), opts
@@ -455,7 +442,7 @@ res.location = (url) ->
   loc = url
 
   if url is 'back'
-    loc = @req.get 'Refferrer' || '/'
+    loc = @req.get('Referrer') || '/'
 
   @set 'Location', loc
   return @
@@ -463,6 +450,7 @@ res.location = (url) ->
 res.redirect = (url) ->
   address = url
   status = 302
+  body = undefined
 
   if arguments.length is 2
     if typeof arguments[0] is 'number'
@@ -477,7 +465,7 @@ res.redirect = (url) ->
 
   @format {
     text: () ->
-      body = statusCode[status]+ '. Redirecting to '+ encodeURI(address)
+      body = statusCodes[status]+ '. Redirecting to '+ encodeURI(address)
       return
     html:() ->
       u = escapeHtml(address)
@@ -498,7 +486,7 @@ res.redirect = (url) ->
   return
 
 res.vary = (field) ->
-  if !field || Array.isArray(field) && !fiedl.length
+  if !field || Array.isArray(field) && !field.length
     deprecate 'res.vary(): Provide a field name'
     return @
 
