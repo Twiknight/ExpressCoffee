@@ -13,7 +13,7 @@ class Layer
       if e instanceof URIError
         e.message = 'Failed to decode param \'' + v + '\''
         e.status = e.statusCode = 400
-        return
+      throw e
 
   constructor: (path, options, fn) ->
     unless @ instanceof Layer
@@ -34,7 +34,7 @@ class Layer
     fn = @handle
 
     if fn.length != 4
-      return error
+      return next error
     try
       fn error, req, res, next
       return
@@ -79,11 +79,17 @@ class Layer
     keys = @keys
     params = @params
 
-    for key,idx in keys
-      val = decode_param m[idx+1]
-      if val || hasOwnProperty.call params,key.name
-        params[key.name] = val
+    i =1
+    loop
+        if(i >= m.length)
+            break
+        key = keys[i-1]
+        prop = key.name
+        val = decode_param m[i]
 
+        if val isnt undefined || !hasOwnProperty.call(params, prop)
+            params[prop] = val
+        i +=1
     return true
 
 module.exports = Layer
