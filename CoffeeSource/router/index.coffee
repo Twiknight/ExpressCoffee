@@ -7,12 +7,12 @@ deprecate = require('depd') 'express'
 flatten = require 'array-flatten'
 parseUrl = require 'parseurl'
 
-objectRegExp = /^\[object(\S+)\]$/
+objectRegExp = /^\[object (\S+)\]$/
 slice = Array.prototype.slice
 toString = Object.prototype.toString
 
 appendMethods = (list, addition)->
-  for method in addtion
+  for method in addition
     unless method in list
       list.push method
   return
@@ -41,22 +41,32 @@ mergeParams = (params, parent) ->
   if typeof parent != 'object' || !parent
     return params
 
-  obj = mixin {},params
+  obj = mixin {},parent
 
-  unless 0 in params && 0 in parent
+  unless 0 of params && 0 of parent
     return mixin obj, params
 
-  int_in_params = (i_param for i_param in params when typeof i_param == 'number')
-  int_in_parent = (i_parent for i_parent in parent when typeof i_parent == 'number')
+  i=0
+  o=0
 
-  max_param = Math.max.apply null,int_in_params
-  max_parent = Math.max.appy null,int_in_parent
+  loop
+      if i of params
+          i +=1
+      else
+          break
 
-  for _idx in [max_param..0]
-    params[_idx+max_parent+1] = params[_idx]
+  loop
+      if o of parent
+          o +=1
+      else
+         break
 
-    if _idx < max_parent+1
-      delete params[_idx]
+  i -=1
+  while i>=0
+      params[i+o] = params[i]
+      if(i < o)
+          delete params[i]
+      i--
 
   return mixin obj, params
 
@@ -64,13 +74,13 @@ restore = (fn, obj) ->
   props =  new Array(arguments.length - 2)
   vals = new Array(arguments.length - 2)
 
-  for prop,idx in props
-    prop = arguments[idx + 2]
-    vals[idx] = obj[prop]
+  for idx in  [0..props.length]
+    props[idx] = arguments[idx + 2]
+    vals[idx] = obj[props[idx]]
 
   return (err) ->
-    for prop,index in props
-      obj[props] = vals[index]
+    for index in [0..props.length]
+      obj[props[index]] = vals[index]
 
     return fn.apply @, arguments
 
@@ -85,7 +95,7 @@ sendOptionsResponse = (res, options, next) ->
     next _error
     return
 
-warp = (old, fn) ->
+wrap = (old, fn) ->
   return ()->
     args = []
     args.push old
@@ -154,16 +164,29 @@ proto.handle = (req, res, out)->
   parentUrl = req.baseUrl || ''
   done = restore out, req, 'baseUrl', 'next', 'params'
 
-  req.next = next
+  trim_prefix = (layer, layerError, layerPath, path)->
+      c = path[layerPath.length]
+      if c && '/' != c && '.' != c
+        return next layerError
 
-  if req.method == 'OPTIONS'
-    done = wrap done, (old,err)->
-      if err || options.length==0
-        return old err
-      sendOptionsResponse res, options, old
+      unless layerPath.length == 0
+        debug 'trim prefix (%s) from url %s', layerPath, req.url
+        removed = layerPath
+        req.url = protohost + req.url.substr protohost.length + removed.length
 
-  req.baseUrl = parentUrl
-  req.originalUrl = req.originalUrl || req.url
+        if !fqdn && req.url[0] != '/'
+          req.url = '/'+req.url
+          slashAdded = true
+
+        req.baseUrl = parentUrl + (if removed[removed.length-1] == '/' then removed.substring 0, removed.length-1 else removed)
+
+      debug '%s %s : %s', layer.name, layerPath, req.originalUrl
+
+      if layerError
+        layer.handle_error layerError, req, res, next
+      else
+        layer.handle_request req, res, next
+      return
 
   next = (err)->
     layerError = if err == 'route' then null else err
@@ -172,18 +195,18 @@ proto.handle = (req, res, out)->
       req.url = req.url.substr 1
       slashAdded = false
 
-    if removed.removed !=0
+    if removed.length isnt 0
       req.baseUrl = parentUrl
       req.url = protohost + removed + req.url.substr protohost.length
       removed = ''
 
-    if idx > stack.length
+    if idx >= stack.length
       setImmediate done, layerError
       return
 
     path = getPathname req
 
-    if path == null
+    unless path?
       return done layerError
 
     while match != true && idx < stack.length
@@ -210,7 +233,7 @@ proto.handle = (req, res, out)->
       if !has_method && method == 'OPTIONS'
         appendMethods options, route._options()
 
-      if !has_method && method == 'HEAD'
+      if !has_method && method isnt 'HEAD'
         match = false
         continue
 
@@ -223,30 +246,6 @@ proto.handle = (req, res, out)->
     req.params = if self.mergeParams then mergeParams layer.params, parentParams else layer.params
     layerPath = layer.path
 
-    trim_prefix = ()->
-      c = path[layerPath.length]
-      if c && '/' != c && '.' != c
-        return next layerError
-
-      unless layerPath.length == 0
-        debug 'trim prefix (%s) from url %s', layerPath, req.url
-        removed = layerPath
-        req.url = protohost + req.url.substr protohost.length + removed.length
-
-        if !fqdn && req.url[0] != '/'
-          req.url = '/'+req.url
-          slashAdded = true
-
-        req.baseUrl = parentUrl + (if removed[removed.length-1] == '/' then removed.substring 0, removed.length-1 else removed)
-
-      debug '%s %s : %s', layer.name, layerPath, req.originalUrl
-
-      if layerError
-        layer.handle_error layerError, req, res, next
-      else
-        layer.handle_request req, res, next
-      return
-
     self.process_params layer, paramcalled, req, res, (err)->
       if err
         return next layerError || err
@@ -256,38 +255,36 @@ proto.handle = (req, res, out)->
 
       trim_prefix layer, layerError, layerPath, path
       return
+    return
+
+  req.next = next
+
+  if req.method == 'OPTIONS'
+    done = wrap done, (old,err)->
+      if err || options.length==0
+        return old err
+      sendOptionsResponse res, options, old
+      return
+
+  req.baseUrl = parentUrl
+  req.originalUrl = req.originalUrl || req.url
   next()
   return
 
 proto.process_params = (layer, called, req, res, done) ->
   params = @params
   keys = layer.keys
+  paramCallbacks = undefined
+  paramCalled = undefined
+  paramVal = undefined
+  key = undefined
+  name = undefined
 
   if !keys || keys.length is 0
     return done()
 
   i = 0
   paramIndex = 0
-
-  paramCallback =  (err) ->
-    fn = paramCallbacks[paramIndex++]
-
-    paramcalled.value = req.params[key.name]
-
-    if err
-      paramCalled.error = err
-      param err
-      return
-
-    unless fn
-      return param()
-
-    try
-      fn req, res, paramCallback, paramVal, key.name
-      return
-    catch error
-      paramCallback error
-      return
 
   param = (err) ->
     if err
@@ -323,6 +320,28 @@ proto.process_params = (layer, called, req, res, done) ->
     paramCallback()
     return
 
+  paramCallback =  (err) ->
+    fn = paramCallbacks[paramIndex++]
+
+    paramCalled.value = req.params[key.name]
+
+    if err
+      paramCalled.error = err
+      param err
+      return
+
+    unless fn
+      return param()
+
+    try
+      fn req, res, paramCallback, paramVal, key.name
+      return
+    catch error
+      paramCallback error
+      return
+
+
+
   param()
   return
 
@@ -346,17 +365,17 @@ proto.use = (fn) ->
     throw new TypeError 'Router.use() requires middleware functions'
 
   for cb in callbacks
-    fn = cb
-    unless typeof fn == 'function'
-      throw new TypeError 'Router.use() requires middleware function but got a ' + gettype(fn)
+    unless typeof cb == 'function'
+      throw new TypeError 'Router.use() requires middleware function but got a ' + gettype(cb)
 
-    debug 'use %s %s', path, fn.name || '<anonymous>'
+    debug 'use %s %s', path, cb.name || '<anonymous>'
 
     layer = new Layer path,{
-      sensitve: @caseSensitive
+      sensitive: @caseSensitive
       strict: false
-      end: false}, fn
+      end: false}, cb
 
+    layer.route = undefined
     @stack.push layer
 
   return @
@@ -365,7 +384,7 @@ proto.route = (path)->
   route = new Route path
 
   layer = new Layer path, {
-    sensitve: @caseSensitive
+    sensitive: @caseSensitive
     strict: @strict
     end: true
   }, route.dispatch.bind(route)
