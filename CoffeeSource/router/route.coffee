@@ -17,11 +17,11 @@ class Route
     @methods = {}
   _handles_method :(method)->
     if @methods._all
-      true
+      return true
 
     name = method.toLowerCase()
 
-    if name = 'head' && !@methods['head']
+    if name is 'head' && !@methods['head']
       name = 'get'
 
     return Boolean(this.methods[name])
@@ -33,15 +33,13 @@ class Route
     if @methods.get && !@methods.head
       methods.push 'head'
 
-    for m in methods
-      m = m.toUpperCase()
+    for m,idx in methods
+      methods[idx] = m.toUpperCase()
 
     return methods
 
 
   dispatch:(req, res, done)->
-    idx = 0
-    stack = @stack
     next = (err)->
       if err && err == 'route'
         return done()
@@ -59,6 +57,8 @@ class Route
         layer.handle_request req, res, next
       return
 
+    idx = 0
+    stack = @stack
     if stack.length == 0
       done()
 
